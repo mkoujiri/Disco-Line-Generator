@@ -95,7 +95,9 @@ def get_next_oline():
     backup_o_bucket = result['bucket']
 
     # add new players from bucket
+    err_count = 0
     while(len(line) < 7):
+        err_count+=1
         result = bucket_choice(peeps, oline_bucket, 7 - len(line), line)
         # store bucket result
         oline_bucket = result['bucket']
@@ -105,6 +107,8 @@ def get_next_oline():
             # build new bucket and store old extras
             backup_o_bucket = oline_bucket.copy()
             oline_bucket = build_bucket(peeps)
+        if err_count == 5:
+            break;
 
     return [x.name for x in line]
 
@@ -118,7 +122,9 @@ def get_next_dline():
     backup_d_bucket = result['bucket']
 
     # add new players from bucket
+    err_count = 0
     while(len(line) < 7):
+        err_count+=1
         result = bucket_choice(peeps, dline_bucket, 7 - len(line), line)
         # store bucket result
         dline_bucket = result['bucket']
@@ -128,6 +134,8 @@ def get_next_dline():
             # build new bucket and store old extras
             backup_d_bucket = dline_bucket.copy()
             dline_bucket = build_bucket(peeps)
+        if err_count == 5:
+            break;
 
     return [x.name for x in line]
 
@@ -179,9 +187,15 @@ def update_line():
 
 @app.route("/api/reset", methods=["POST"])
 def reset_lines():
+    global oline_bucket, dline_bucket, backup_o_bucket, backup_d_backup
     if request.method == "POST":
         Player.players = []
+        oline_bucket = []
+        dline_bucket = []
+        backup_o_bucket = []
+        backup_d_bucket = []
         load_players_from_file("player-data-1-16.csv")
+    return {}
 
 
 @app.route("/api")
