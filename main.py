@@ -40,7 +40,6 @@ def build_bucket(player_list):
             case 1:
                 for i in range(1):
                     bucket.append(player)
-    print("created new bucket with length: ",len(bucket))
     return bucket
 
 
@@ -97,7 +96,7 @@ def get_next_oline():
 
     # add new players from bucket
     while(len(line) < 7):
-        result = bucket_choice(peeps, oline_bucket, 7 - len(line))
+        result = bucket_choice(peeps, oline_bucket, 7 - len(line), line)
         # store bucket result
         oline_bucket = result['bucket']
         line = line + result['line']
@@ -120,7 +119,7 @@ def get_next_dline():
 
     # add new players from bucket
     while(len(line) < 7):
-        result = bucket_choice(peeps, dline_bucket, 7 - len(line))
+        result = bucket_choice(peeps, dline_bucket, 7 - len(line), line)
         # store bucket result
         dline_bucket = result['bucket']
         line = line + result['line']
@@ -154,7 +153,6 @@ def test():
 def update_line():
     if request.method == "POST":
         data = request.get_json()
-        print(data)
         # shitty solution to update players
         for item in data:
             for player in Player.players:
@@ -163,10 +161,16 @@ def update_line():
         return {}
 
     elif request.method == "GET":
-        Player.players = []
-        load_players_from_file("player-data-1-16.csv")
+        if(len(Player.players) == 0):
+            load_players_from_file("player-data-1-16.csv")
         ret_dict = [{"name":x.name,"selected":x.attending} for x in Player.players]
         return ret_dict
+
+@app.route("/reset", methods=["POST"])
+def reset_lines():
+    if request.method == "POST":
+        Player.players = []
+        load_players_from_file("player-data-1-16.csv")
 
 
 @app.route("/")

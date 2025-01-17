@@ -15,6 +15,9 @@ export async function GetFakeRoster(): Promise<RosterPlayer[]> {
 export async function UpdateRoster(players: RosterPlayer[]) {
   await fetch(`${apiUrl}/set_line`, {
     method: "POST",
+	headers: {
+		'Content-Type': 'application/json'
+	},
     body: JSON.stringify(players)
   })
 }
