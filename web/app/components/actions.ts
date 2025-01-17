@@ -10,15 +10,38 @@ export async function GetRoster(): Promise<RosterPlayer[]> {
 export async function UpdateRoster(players: RosterPlayer[]) {
   await fetch(`${apiUrl}/set_line`, {
     method: "POST",
-    headers: {
-      'Content-Type': 'application/json'
-    },
     body: JSON.stringify(players)
   })
 }
 
-export async function GenerateLine(): Promise<String[]> {
-  return ["Tom", "Mattie", "Liam", "Tom", "Mattie", "Liam", "Tom",];
+export async function GenerateLine(): Promise<Line> {
+  const response = await fetch(`${apiUrl}/gen_line`, {
+    method: "GET"
+  })
+  return response.json();
+}
+
+export async function GenerateFakeLine(): Promise<Line> {
+  return {
+    dline: [
+      "Peyton",
+      "Mark",
+      "Thomas",
+      "Jacob",
+      "Matvey",
+      "Caeser",
+      "Andy"
+    ],
+    oline: [
+      "Quin",
+      "Schwartz",
+      "Josh",
+      "Michael",
+      "Mattie",
+      "Liam",
+      "Koz"
+    ]
+  }
 }
 
 export async function ResetGenerator(){
