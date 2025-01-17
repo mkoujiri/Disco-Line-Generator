@@ -7,7 +7,7 @@ import { UpdateRoster } from "./actions";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 
 export default function PlayerSelector(props: { players: RosterPlayer[] }) {
-  const [selectedPlayers, setSelectedPlayers] = useState<String[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<RosterPlayer[]>(props.players);
   const router = useRouter();
   return (
     <Stack padding={1} spacing={1}>
@@ -25,12 +25,11 @@ export default function PlayerSelector(props: { players: RosterPlayer[] }) {
         Submit
       </Button>
       <Stack>
-        {props.players.map((player, index) => (
+        {selectedPlayers.map((player, index) => (
           <Stack direction="row" alignItems="center" key={index}>
             <Checkbox
-              value={selectedPlayers.includes(player.name)}
-              onClick={() => setSelectedPlayers([player.name, ...selectedPlayers])}
-              sx={{ colorAdjust: "yellow" }}
+              value={player.selected}
+              onClick={() => setSelectedPlayers([{name: player.name, selected: !player.selected}, ...selectedPlayers.splice(index)])}
             />
             <Typography>{player.name}</Typography>
           </Stack>
