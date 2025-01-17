@@ -1,18 +1,18 @@
-"use server";
+"use client"
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 import { GetRoster } from "../components/actions";
 import PlayerSelector from "../components/player-selector";
+import { redirect } from "next/navigation";
 
-export async function getServerSideProps() {
+export default function Players() {
   try {
-    const players: RosterPlayer[] = await GetRoster();
-    return { props: { players } };
+    GetRoster().then((players) => {
+      return <PlayerSelector players={players} />;
+    });
+    
   } catch (e) {
-    return { redirect: { destination: "/error", permanent: false } };
+    redirect("/error");
   }
-}
-
-export default async function Players({ players }: { players: RosterPlayer[] }) {
-  return <PlayerSelector players={players} />;
 }
