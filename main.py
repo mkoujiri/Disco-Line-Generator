@@ -1,7 +1,7 @@
 from flask import Flask, request
 from enum import Enum
 import random
-
+from flask_cors import CORS
 
 class Player:
     players = []
@@ -50,6 +50,8 @@ dline_bucket = []
 backup_d_bucket = []
 
 app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 def bucket_choice(player_list, bucket, count, excludes=[]):
     line = []
@@ -158,8 +160,10 @@ def update_line():
             for player in Player.players:
                 if player.name == item['name']:
                     player.attending = item['selected']
+        return {}
 
     elif request.method == "GET":
+        Player.players = []
         load_players_from_file("player-data-1-16.csv")
         ret_dict = [{"name":x.name,"selected":x.attending} for x in Player.players]
         return ret_dict
