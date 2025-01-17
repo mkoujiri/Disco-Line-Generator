@@ -1,3 +1,3 @@
 #!/bin/zsh
 
-flask --app main run -p 3000
+flask --app main run
