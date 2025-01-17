@@ -152,11 +152,12 @@ def test():
 def update_line():
     if request.method == "POST":
         data = request.get_json()
+        print(data)
         # shitty solution to update players
-        # for key,value in data.items():
-        #     for player in Player.players:
-        #         if player.name == key:
-        #             player.attending = value
+        for item in data:
+            for player in Player.players:
+                if player.name == item['name']:
+                    player.attending = item['selected']
 
     elif request.method == "GET":
         load_players_from_file("player-data-1-16.csv")
