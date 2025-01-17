@@ -131,13 +131,13 @@ def get_next_dline():
 
     return [x.name for x in line]
 
-@app.route("/gen_line",methods=["GET"])
+@app.route("/api/gen_line",methods=["GET"])
 def gen_line():
     return {
             "oline": get_next_oline(),
             "dline": get_next_dline()
             }
-@app.route("/test", methods=["GET"])
+@app.route("/api/test", methods=["GET"])
 def test():
     results_dict = {}
     for i in range(10000):
@@ -149,15 +149,26 @@ def test():
                 results_dict[player] = results_dict[player]+1
     return results_dict
 
-@app.route("/set_line", methods=['GET','POST'])
+@app.route("/api/set_line", methods=['GET','POST'])
 def update_line():
+    global oline_bucket, dline_bucket, backup_o_bucket, backup_d_bucket
     if request.method == "POST":
         data = request.get_json()
         # shitty solution to update players
         for item in data:
             for player in Player.players:
                 if player.name == item['name']:
+                    tmp = player.attending
                     player.attending = item['selected']
+                    # if player has left
+                    if not player.attending and tmp != player.attending:
+                        # remove from buckets so they aren't chosen again
+                        oline_bucket = [x for x in oline_bucket if x != player]
+                        backup_o_bucket = [x for x in backup_o_bucket if x != player]
+                        dline_bucket = [x for x in dline_bucket if x != player]
+                        backup_d_bucket = [x for x in backup_d_bucket if x != player]
+
+        
         return {}
 
     elif request.method == "GET":
@@ -166,14 +177,14 @@ def update_line():
         ret_dict = [{"name":x.name,"selected":x.attending} for x in Player.players]
         return ret_dict
 
-@app.route("/reset", methods=["POST"])
+@app.route("/api/reset", methods=["POST"])
 def reset_lines():
     if request.method == "POST":
         Player.players = []
         load_players_from_file("player-data-1-16.csv")
 
 
-@app.route("/")
+@app.route("/api")
 def hello_world():
     # generate player list
     return "<p>Hello World</p>"
