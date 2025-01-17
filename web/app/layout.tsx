@@ -32,12 +32,12 @@ export default function RootLayout(props: { children: React.ReactNode }) {
                       padding: { xs: ".5rem", sm: "1rem" },
                     }}
                   >
-                    <Box height={"15%"}>
+                    <Box height={"10%"}>
                       <TopBar/>
                     </Box>
                     <Card
                       sx={{
-                        height: "85%",
+                        height: "90%",
                         overflowY: "auto",
                       }}
                     >
