@@ -1,7 +1,6 @@
-from flask import Flask
+from flask import Flask, request
 from enum import Enum
 import random
-
 
 
 class Player:
@@ -154,14 +153,14 @@ def update_line():
     if request.method == "POST":
         data = request.get_json()
         # shitty solution to update players
-        for key,value in data.items():
-            for player in Player.players:
-                if player.name == key:
-                    player.attending = value
+        # for key,value in data.items():
+        #     for player in Player.players:
+        #         if player.name == key:
+        #             player.attending = value
 
     elif request.method == "GET":
         load_players_from_file("player-data-1-16.csv")
-        ret_dict = {x.name:x.attending for x in Player.players}
+        ret_dict = [{"name":x.name,"selected":x.attending} for x in Player.players]
         return ret_dict
 
 
