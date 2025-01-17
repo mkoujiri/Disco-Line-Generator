@@ -30,7 +30,9 @@ export default function PlayerSelector(props: { players: RosterPlayer[] }) {
             <Checkbox
               value={player.selected}
               onClick={() => {
-                setSelectedPlayers([...selectedPlayers.filter((p) => p.name !== player.name), {name: player.name, selected: !player.selected}, ])}}
+                const temp = selectedPlayers;
+                temp[index].selected = !player.selected
+                setSelectedPlayers(temp)}}
             />
             <Typography>{player.name}</Typography>
           </Stack>
