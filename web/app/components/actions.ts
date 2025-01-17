@@ -1,5 +1,4 @@
-"use server"
-const apiUrl = "http://127.0.0.1:5000";
+const apiUrl = "http://127.0.0.1:5000/api";
 
 export async function GetRoster(): Promise<RosterPlayer[]> {
   try {
