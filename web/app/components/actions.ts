@@ -7,8 +7,14 @@ export async function GetRoster(): Promise<RosterPlayer[]> {
   return response.json();
 }
 
-export async function UpdateRoster(players: String[]) {
-  return null;
+export async function UpdateRoster(players: RosterPlayer[]) {
+  await fetch(`${apiUrl}/set_line`, {
+    method: "POST",
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(players)
+  })
 }
 
 export async function GenerateLine(): Promise<String[]> {
