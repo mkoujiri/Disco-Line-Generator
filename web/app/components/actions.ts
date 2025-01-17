@@ -7,6 +7,11 @@ export async function GetRoster(): Promise<RosterPlayer[]> {
   return response.json();
 }
 
+export async function GetFakeRoster(): Promise<RosterPlayer[]> {
+  
+  return [{name: "tom", selected: true}, {name: "mattie", selected: true}, {name: "liam", selected: false}];
+}
+
 export async function UpdateRoster(players: RosterPlayer[]) {
   await fetch(`${apiUrl}/set_line`, {
     method: "POST",

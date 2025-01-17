@@ -28,11 +28,13 @@ export default function PlayerSelector(props: { players: RosterPlayer[] }) {
         {selectedPlayers.map((player, index) => (
           <Stack direction="row" alignItems="center" key={index}>
             <Checkbox
-              value={player.selected}
+              checked={player.selected}
               onClick={() => {
-                const temp = selectedPlayers;
-                temp[index].selected = !player.selected
-                setSelectedPlayers(temp)}}
+                // thanks chatgpt
+                const updatedPlayers = [...selectedPlayers]; // Create a shallow copy of the array
+                updatedPlayers[index].selected = !updatedPlayers[index].selected; // Toggle the selected property
+               setSelectedPlayers(updatedPlayers); // Set the updated array as the new state
+              }}
             />
             <Typography>{player.name}</Typography>
           </Stack>
