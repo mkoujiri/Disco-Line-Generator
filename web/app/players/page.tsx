@@ -1,14 +1,18 @@
 "use server";
+export const dynamic = 'force-dynamic';
+
 import { GetRoster } from "../components/actions";
 import PlayerSelector from "../components/player-selector";
-import { redirect } from 'next/navigation'
 
-export default async function Players() {
+export async function getServerSideProps() {
   try {
-
     const players: RosterPlayer[] = await GetRoster();
-    return <PlayerSelector players={players} />;
+    return { props: { players } };
   } catch (e) {
-    redirect("/error")
+    return { redirect: { destination: "/error", permanent: false } };
   }
+}
+
+export default async function Players({ players }: { players: RosterPlayer[] }) {
+  return <PlayerSelector players={players} />;
 }
