@@ -1,7 +1,32 @@
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+from datetime import datetime
+
 from flask import Flask, request
 from enum import Enum
 import random
 from flask_cors import CORS
+
+SPREADSHEET_ID = "1UIThPUV3PVG88XLgROorz1ihECndz1odUNYegEj81uU"
+
+app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+
+# helper for cell conversion
+def num_to_col_letter(n):
+    """Converts a column number to its corresponding letter representation."""
+    result = ""
+    while n > 0:
+        n, remainder = divmod(n - 1, 26)
+        result = chr(65 + remainder) + result
+    return result
 
 class Player:
     players = []
@@ -40,17 +65,93 @@ def build_bucket(player_list):
             case 1:
                 for i in range(1):
                     bucket.append(player)
+    print("created bucket with: ", [x.name for x in bucket])
     return bucket
 
+def authenticate_api(SCOPES):
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                  "credentials.json", SCOPES
+                  )
+            creds = flow.run_local_server(port=0)
+            # Save the credentials for the next run
+            with open("token.json", "w") as token:
+                token.write(creds.to_json())
+    return creds
 
-oline_bucket = []
-backup_o_bucket = []
-dline_bucket = []
-backup_d_bucket = []
+def write_players_to_sheet():
+    try:
+        service = build("sheets", "v4", credentials=creds)
 
-app = Flask(__name__)
-cors = CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
+        # build msg body and range
+        sheet_range = "Sheet1!B1:Z1"
+        result = (
+            service.spreadsheets().values()
+            .get(spreadsheetId=SPREADSHEET_ID, range=sheet_range)
+            .execute()
+        )
+        sheet_data = result.get('values',[])
+
+        date = datetime.today().strftime('%m/%d')
+
+        values = [[date]] + [[x.attending] for x in Player.players]
+        if len(sheet_data) > 0:
+            column = num_to_col_letter(len(sheet_data[0])+1) if date not in sheet_data[0] else num_to_col_letter(sheet_data[0].index(date)+2)
+            write_range = f"{column}1:{column}{len(Player.players)+1}"
+
+            # first we check the write range and see what exists, and keep whoever is marked as attending
+            result = (
+                service.spreadsheets().values()
+                .get(spreadsheetId=SPREADSHEET_ID, range=write_range)
+                .execute()
+            )
+
+            current_attendance = [x for [x] in result['values'][1:]]
+            if(len(current_attendance) > 0):
+                for i in range(len(values[1:])):
+                    if current_attendance[i] == "TRUE":
+                        values[i+1][0] = True
+        else:
+            write_range = f"B1:B{len(Player.players)+1}"
+        
+
+        body = {"values": values}
+        # write result
+        result = (
+            service.spreadsheets().values()
+            .update(spreadsheetId=SPREADSHEET_ID, range=write_range, valueInputOption="USER_ENTERED", body=body)
+            .execute()
+        )
+
+        print('wrote to attendance sheet')
+    except HttpError as error:
+        print(error)
+
+
+
+with app.app_context():
+    global oline_bucket, backup_o_bucket,dline_bucket,backup_d_bucket,creds
+    print("creating empty buckets")
+    oline_bucket = []
+    backup_o_bucket = []
+    dline_bucket = []
+    backup_d_bucket = []
+
+    print("authenticating with Sheets API")
+    SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+    # The ID and range of a sample spreadsheet.
+    creds = authenticate_api(SCOPES)
+
 
 def bucket_choice(player_list, bucket, count, excludes=[]):
     line = []
@@ -89,6 +190,8 @@ def get_next_oline():
     global oline_bucket, backup_o_bucket
     peeps = [x for x in Player.players if x.line == "O" and x.attending] 
 
+    print(set([(x.name,x.streak) for x in oline_bucket]), [x.name for x in backup_o_bucket])
+
     # get scragglers
     result = bucket_choice(peeps, backup_o_bucket, 7)
     line = result['line']
@@ -110,11 +213,18 @@ def get_next_oline():
         if err_count == 5:
             break;
 
+    for player in peeps:
+        if player not in line:
+            player.streak = 0
+        else:
+            player.streak += 1
     return [x.name for x in line]
 
 def get_next_dline():
     global dline_bucket, backup_d_bucket
     peeps = [x for x in Player.players if x.line == "D" and x.attending] 
+
+    print(set([(x.name,x.streak) for x in dline_bucket]), [x.name for x in backup_d_bucket])
 
     # get scragglers
     result = bucket_choice(peeps, backup_d_bucket, 7)
@@ -137,6 +247,11 @@ def get_next_dline():
         if err_count == 5:
             break;
 
+    for player in peeps:
+        if player not in line:
+            player.streak = 0
+        else:
+            player.streak += 1
     return [x.name for x in line]
 
 @app.route("/api/gen_line",methods=["GET"])
@@ -177,6 +292,7 @@ def update_line():
                         backup_d_bucket = [x for x in backup_d_bucket if x != player]
 
         
+        write_players_to_sheet()
         return {}
 
     elif request.method == "GET":
@@ -187,7 +303,7 @@ def update_line():
 
 @app.route("/api/reset", methods=["POST"])
 def reset_lines():
-    global oline_bucket, dline_bucket, backup_o_bucket, backup_d_backup
+    global oline_bucket, dline_bucket, backup_o_bucket, backup_d_bucket
     if request.method == "POST":
         Player.players = []
         oline_bucket = []

@@ -172,3 +172,5 @@ cython_debug/
 
 # installed dependencies
 node_modules/
+credentials.json
+token.json
