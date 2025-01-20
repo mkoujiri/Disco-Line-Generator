@@ -106,21 +106,24 @@ def write_players_to_sheet():
 
         values = [[date]] + [[x.attending] for x in Player.players]
         if len(sheet_data) > 0:
-            column = num_to_col_letter(len(sheet_data[0])+1) if date not in sheet_data[0] else num_to_col_letter(sheet_data[0].index(date)+2)
+            if date[1:] in sheet_data[0]:
+                date = date[1:]
+            column = num_to_col_letter(sheet_data[0].index(date)+2) if date in sheet_data[0] else num_to_col_letter(len(sheet_data[0])+2)
             write_range = f"{column}1:{column}{len(Player.players)+1}"
 
-            # first we check the write range and see what exists, and keep whoever is marked as attending
-            result = (
-                service.spreadsheets().values()
-                .get(spreadsheetId=SPREADSHEET_ID, range=write_range)
-                .execute()
-            )
+            if date in sheet_data[0]:
+                # first we check the write range and see what exists, and keep whoever is marked as attending
+                result = (
+                    service.spreadsheets().values()
+                    .get(spreadsheetId=SPREADSHEET_ID, range=write_range)
+                    .execute()
+                )
 
-            current_attendance = [x for [x] in result['values'][1:]]
-            if(len(current_attendance) > 0):
-                for i in range(len(values[1:])):
-                    if current_attendance[i] == "TRUE":
-                        values[i+1][0] = True
+                current_attendance = [x for [x] in result['values'][1:]]
+                if(len(current_attendance) > 0):
+                    for i in range(len(values[1:])):
+                        if current_attendance[i] == "TRUE":
+                            values[i+1][0] = True
         else:
             write_range = f"B1:B{len(Player.players)+1}"
         
@@ -183,67 +186,39 @@ def bucket_choice(player_list, bucket, count, excludes=[]):
         bucket_copy = [x for x in bucket_copy if x != player_removed]
     return { "bucket": bucket, "line": line }
 
-            
+def get_next_line(team):
+    global oline_bucket,backup_o_bucket,dline_bucket,backup_d_bucket
+    peeps = [x for x in Player.players if x.line == team and x.attending]
+    if team == "O":
+        bucket = oline_bucket
+        result = bucket_choice(peeps, backup_o_bucket, 7)
+        backup_o_bucket = result['bucket']
+    else:
+        bucket = dline_bucket
+        result = bucket_choice(peeps, backup_d_bucket, 7)
+        backup_d_bucket = result['bucket']
 
-
-def get_next_oline():
-    global oline_bucket, backup_o_bucket
-    peeps = [x for x in Player.players if x.line == "O" and x.attending] 
-
-    print(set([(x.name,x.streak) for x in oline_bucket]), [x.name for x in backup_o_bucket])
-
-    # get scragglers
-    result = bucket_choice(peeps, backup_o_bucket, 7)
     line = result['line']
-    backup_o_bucket = result['bucket']
 
-    # add new players from bucket
     err_count = 0
     while(len(line) < 7):
         err_count+=1
-        result = bucket_choice(peeps, oline_bucket, 7 - len(line), line)
+        result = bucket_choice(peeps, bucket, 7 - len(line), line)
         # store bucket result
-        oline_bucket = result['bucket']
-        line = line + result['line']
-        
-        if(len(line) < 7):
-            # build new bucket and store old extras
-            backup_o_bucket = oline_bucket.copy()
-            oline_bucket = build_bucket(peeps)
-        if err_count == 5:
-            break;
-
-    for player in peeps:
-        if player not in line:
-            player.streak = 0
+        if team == "O":
+            oline_bucket = result['bucket']
         else:
-            player.streak += 1
-    return [x.name for x in line]
-
-def get_next_dline():
-    global dline_bucket, backup_d_bucket
-    peeps = [x for x in Player.players if x.line == "D" and x.attending] 
-
-    print(set([(x.name,x.streak) for x in dline_bucket]), [x.name for x in backup_d_bucket])
-
-    # get scragglers
-    result = bucket_choice(peeps, backup_d_bucket, 7)
-    line = result['line']
-    backup_d_bucket = result['bucket']
-
-    # add new players from bucket
-    err_count = 0
-    while(len(line) < 7):
-        err_count+=1
-        result = bucket_choice(peeps, dline_bucket, 7 - len(line), line)
-        # store bucket result
-        dline_bucket = result['bucket']
+            dline_bucket = result['bucket']
         line = line + result['line']
-        
         if(len(line) < 7):
-            # build new bucket and store old extras
-            backup_d_bucket = dline_bucket.copy()
-            dline_bucket = build_bucket(peeps)
+            if team == "O":
+                backup_o_bucket = oline_bucket.copy()
+                oline_bucket = build_bucket(peeps)
+                bucket = oline_bucket
+            else:
+                backup_d_bucket = dline_bucket.copy()
+                dline_bucket = build_bucket(peeps)
+                bucket = dline_bucket
         if err_count == 5:
             break;
 
@@ -256,9 +231,15 @@ def get_next_dline():
 
 @app.route("/api/gen_line",methods=["GET"])
 def gen_line():
+    oline = get_next_line("O")
+    dline = get_next_line("D")
+    # log line
+    with open('line_log','a') as f:
+        f.write("oline:"+",".join(oline) + ' ')
+        f.write("dline:"+",".join(dline) + '\n')
     return {
-            "oline": get_next_oline(),
-            "dline": get_next_dline()
+            "oline": oline,
+            "dline": dline
             }
 @app.route("/api/test", methods=["GET"])
 def test():
